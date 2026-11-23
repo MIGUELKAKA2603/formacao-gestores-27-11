@@ -43,6 +43,7 @@ input:focus,select:focus{outline:none;border-color:#2B91CE}
 .ok h2{font-weight:800;font-size:22px;margin-bottom:8px}.ok p{font-size:15px;line-height:1.45;color:#4a5185}
 .logos{display:flex;justify-content:center;align-items:center;gap:22px;margin-top:22px}
 .logos img.s{height:62px}.logos img.c{height:30px}
+.setor{padding:13px 14px;border-radius:14px;background:#F3F6FB;font-weight:600;font-size:15px}
 .hide{display:none!important}
 </style>
 </head>
@@ -65,15 +66,15 @@ input:focus,select:focus{outline:none;border-color:#2B91CE}
     <div class="q">Você vai participar?</div>
     <div class="hint">Responda até 26/11.</div>
 
-    <!-- Escola -->
-    <label for="escolaSel" id="lblEscola">Escola</label>
-    <select id="escolaSel" class="hide"></select>
-    <input id="escolaTxt" placeholder="Nome da escola" autocomplete="off">
-
     <!-- Nome -->
-    <label for="nomeSel">Nome completo</label>
+    <label for="nomeSel">Seu nome</label>
     <select id="nomeSel" class="hide"></select>
-    <input id="nomeTxt" placeholder="Digite seu nome" autocomplete="name">
+    <div id="manual">
+      <input id="nomeTxt" placeholder="Digite seu nome completo" autocomplete="name">
+      <label for="escolaTxt">Escola ou setor</label>
+      <input id="escolaTxt" placeholder="Nome da escola ou setor" autocomplete="off">
+    </div>
+    <div id="setorBox" class="hide"><label>Escola ou setor</label><div class="setor" id="setor"></div></div>
 
     <!-- Função -->
     <label for="funcao">Função</label>
@@ -131,35 +132,22 @@ const opcoesFuncao = ['Gestor(a)','Gestor(a) adjunto(a)','Coordenador(a)','Pedag
 const ordenar = (a,b) => a.localeCompare(b,'pt-BR');
 
 function usarLista() {
-  const escolas = [...new Set(lista.map(p => p.escola))].sort(ordenar);
-  $('escolaSel').innerHTML = '<option value="">Selecione sua escola</option>' +
-    escolas.map(e => `<option>${esc(e)}</option>`).join('') +
-    `<option value="${OUTRA}">Minha escola não está na lista</option>`;
-  $('escolaSel').classList.remove('hide'); $('escolaTxt').classList.add('hide');
-  $('nomeSel').innerHTML = '<option value="">Escolha a escola primeiro</option>';
-  $('nomeSel').classList.remove('hide'); $('nomeTxt').classList.add('hide');
+  const nomes = lista.map(p => p.nome).sort(ordenar);
+  $('nomeSel').innerHTML = '<option value="">Toque para escolher seu nome</option>' +
+    nomes.map(n => `<option>${esc(n)}</option>`).join('') +
+    `<option value="${OUTRA}">Meu nome não está na lista</option>`;
+  $('nomeSel').classList.remove('hide'); $('manual').classList.add('hide');
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
-$('escolaSel').addEventListener('change', () => {
-  const e = $('escolaSel').value;
-  if (e === OUTRA) {
-    $('escolaTxt').classList.remove('hide'); $('escolaTxt').focus();
-    $('nomeSel').classList.add('hide'); $('nomeTxt').classList.remove('hide'); return;
-  }
-  $('escolaTxt').classList.add('hide');
-  const nomes = lista.filter(p => p.escola === e).map(p => p.nome).sort(ordenar);
-  $('nomeSel').innerHTML = '<option value="">Selecione seu nome</option>' +
-    nomes.map(n => `<option>${esc(n)}</option>`).join('') +
-    `<option value="${OUTRA}">Meu nome não está na lista</option>`;
-  $('nomeSel').classList.remove('hide'); $('nomeTxt').classList.add('hide');
-});
 $('nomeSel').addEventListener('change', () => {
   const n = $('nomeSel').value;
-  if (n === OUTRA) { $('nomeTxt').classList.remove('hide'); $('nomeTxt').focus(); return; }
-  $('nomeTxt').classList.add('hide');
-  const p = lista.find(p => p.escola === $('escolaSel').value && p.nome === n);
-  if (p && p.funcao) {
+  if (n === OUTRA) { $('manual').classList.remove('hide'); $('setorBox').classList.add('hide'); $('nomeTxt').focus(); return; }
+  $('manual').classList.add('hide');
+  const p = lista.find(p => p.nome === n);
+  if (!p) { $('setorBox').classList.add('hide'); return; }
+  $('setor').textContent = p.escola; $('setorBox').classList.remove('hide');
+  if (p.funcao) {
     if (opcoesFuncao.includes(p.funcao)) { $('funcao').value = p.funcao; $('funcOutroBox').classList.add('hide'); }
     else { $('funcao').value = 'OUTRO'; $('funcOutroBox').classList.remove('hide'); $('funcOutro').value = p.funcao; }
   }
@@ -173,19 +161,21 @@ document.querySelectorAll('.chip').forEach(c => c.onclick = () => {
   motivo = c.dataset.m; $('outroBox').classList.toggle('hide', motivo !== 'Outro');
 });
 
-function valor(sel, txt) {
-  const s = $(sel);
-  if (!s.classList.contains('hide') && s.value && s.value !== OUTRA) return s.value;
-  return $(txt).value.trim();
+function dados() {
+  const n = $('nomeSel').value;
+  if (!$('nomeSel').classList.contains('hide') && n && n !== OUTRA) {
+    const p = lista.find(p => p.nome === n); return { nome: n, escola: p ? p.escola : '' };
+  }
+  return { nome: $('nomeTxt').value.trim(), escola: $('escolaTxt').value.trim() };
 }
 function erro(m){ $('erro').textContent = m; $('erro').classList.remove('hide'); }
 
 $('form').addEventListener('submit', async ev => {
   ev.preventDefault(); $('erro').classList.add('hide');
-  const escola = valor('escolaSel','escolaTxt'), nome = valor('nomeSel','nomeTxt');
+  const { escola, nome } = dados();
   let funcao = $('funcao').value; if (funcao === 'OUTRO') funcao = $('funcOutro').value.trim();
-  if (!escola) return erro('Informe sua escola.');
-  if (!nome) return erro('Informe seu nome.');
+  if (!nome) return erro('Escolha ou informe seu nome.');
+  if (!escola) return erro('Informe sua escola ou setor.');
   if (!funcao) return erro('Informe sua função.');
   if (!resposta) return erro('Toque em "Vou" ou "Não vou".');
   let mot = '';
