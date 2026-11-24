@@ -1,6 +1,6 @@
 // Uso: node gerar_freq.js dados.json saida.docx
 const fs=require('fs');
-const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,ShadingType,ImageRun,BorderStyle,VerticalAlign,HeightRule,TableLayoutType,PageOrientation}=require('docx');
+const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,ShadingType,ImageRun,BorderStyle,VerticalAlign,HeightRule,TableLayoutType,PageOrientation,Header,HorizontalPositionRelativeFrom,VerticalPositionRelativeFrom,TextWrappingType}=require('docx');
 const [,,inp,out]=process.argv; const D=JSON.parse(fs.readFileSync(inp,'utf8'));
 const F='Arial', NAVY='282C62';
 const b={style:BorderStyle.SINGLE,size:6,color:'000000'}; const borders={top:b,bottom:b,left:b,right:b};
@@ -14,7 +14,7 @@ const cell=(text,w,o={})=>new TableCell({borders,width:{size:w,type:WidthType.DX
 const L=2600,V=5099;
 const hrow=(a,av,b2,bv)=>new TableRow({children:[cell(a,L,{bold:true,fill:'E8ECF5'}),cell(av,V),cell(b2,L,{bold:true,fill:'E8ECF5'}),cell(bv,V)]});
 const cab=new Table({width:{size:W,type:WidthType.DXA},columnWidths:[L,V,L,V],layout:TableLayoutType.FIXED,rows:[
-  hrow('MUNICÍPIO','TUPANATINGA - PE','GRE',D.gre||''),
+  hrow('MUNICÍPIO','TUPANATINGA - PE','GRE','SERTÃO DO MOXOTÓ IPANEMA – ARCOVERDE'),
   hrow('LOCAL',D.local,'ARTICULADOR MUNICIPAL','ANTONIO CARLOS PEREIRA'),
   hrow('PÚBLICO',D.publico,'DATA',D.data),
   new TableRow({children:[cell('TEMA',L,{bold:true,fill:'E8ECF5'}),cell(D.tema,V+L+V,{span:3})]}),
@@ -30,7 +30,7 @@ const linhas=D.rows.map((r,i)=>{const aus=!!r.obs, f=aus?'D9D9D9':undefined;
    cell(aus?'AUSENTE':'',cAss,{fill:f,bold:aus,align:AlignmentType.CENTER}),cell(r.obs||'',cObs,{fill:f,size:18})]});});
 const lista=new Table({width:{size:W,type:WidthType.DXA},columnWidths:[cN,cNome,cAss,cObs],layout:TableLayoutType.FIXED,rows:[head,...linhas]});
 const img=(f,w,h)=>new ImageRun({type:'png',data:fs.readFileSync(f),transformation:{width:w,height:h}});
-const logos=new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:80},children:[img('logo-sme.png',78,70),t('          '),img('logo-crianca-alfabetizada.png',110,43)]});
+const logos=new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:60},children:[img('logo-crianca-alfabetizada.png',100,39)]});
 const nb={style:BorderStyle.NONE,size:0,color:'FFFFFF'}; const nbs={top:nb,bottom:nb,left:nb,right:nb};
 const ac=(nome,cargo)=>new TableCell({borders:nbs,width:{size:W/2,type:WidthType.DXA},children:[
   new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:600},children:[t('_________________________________')]}),
@@ -38,8 +38,11 @@ const ac=(nome,cargo)=>new TableCell({borders:nbs,width:{size:W/2,type:WidthType
   new Paragraph({alignment:AlignmentType.CENTER,children:[t(cargo,{size:18})]})]});
 const assinaturas=new Table({width:{size:W,type:WidthType.DXA},columnWidths:[W/2,W/2],layout:TableLayoutType.FIXED,
   rows:[new TableRow({cantSplit:true,children:[ac('ANTONIO CARLOS PEREIRA','Articulador Municipal'),ac('ALESSANDRA DE SOUZA F. RODRIGUES','Diretora de Ensino')]})]});
+const fundo=new Header({children:[new Paragraph({children:[new ImageRun({type:'png',data:fs.readFileSync('timbre_paisagem.png'),
+  transformation:{width:1121,height:793},floating:{horizontalPosition:{relative:HorizontalPositionRelativeFrom.PAGE,offset:0},
+  verticalPosition:{relative:VerticalPositionRelativeFrom.PAGE,offset:0},behindDocument:true,allowOverlap:true,wrap:{type:TextWrappingType.NONE}}})]})]});
 const doc=new Document({styles:{default:{document:{run:{font:F,size:20}}}},sections:[{
-  properties:{page:{size:{width:11906,height:16838,orientation:PageOrientation.LANDSCAPE},margin:{top:720,bottom:720,left:720,right:720}}},
+  properties:{page:{size:{width:11906,height:16838,orientation:PageOrientation.LANDSCAPE},margin:{top:1560,bottom:1900,left:720,right:720,header:0,footer:0}}},headers:{default:fundo},
   children:[logos,
    new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:160},children:[t(D.titulo,{bold:true,size:26,color:NAVY})]}),
    cab,new Paragraph({spacing:{after:120},children:[]}),lista,
